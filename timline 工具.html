@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>胡塞武装袭击事件时间轴生成器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body data-theme="default">
+    <div class="container">
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="panel-row">
+                <div class="input-group">
+                    <label for="event-date">日期</label>
+                    <input type="date" id="event-date" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="event-icon">图标</label>
+                    <select id="event-icon">
+                        <option value="fa-rocket">火箭</option>
+                        <option value="fa-crosshairs">准星</option>
+                        <option value="fa-fighter-jet">战斗机</option>
+                        <option value="fa-fire">火焰</option>
+                        <option value="fa-hourglass-half">沙漏</option>
+                        <option value="fa-exchange-alt">交换</option>
+                        <option value="fa-shield-alt">护盾</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="event-tags">标签（用逗号分隔）</label>
+                    <input type="text" id="event-tags" placeholder="例如: 导弹袭击,无人机攻击">
+                </div>
+            </div>
+            
+            <div class="panel-row">
+                <div class="input-group">
+                    <label for="event-content">事件描述</label>
+                    <textarea id="event-content" placeholder="输入事件详细描述..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="panel-row">
+                <button id="add-event" class="btn btn-primary">添加事件</button>
+                <button id="export-data" class="btn btn-secondary">导出为文本</button>
+                <button id="import-data" class="btn btn-secondary">从文本导入</button>
+            </div>
+            
+            <div class="theme-switcher">
+                <label>预设主题：</label>
+                <div class="theme-btn theme-default active" data-theme="default"></div>
+                <div class="theme-btn theme-dark-tech" data-theme="dark-tech"></div>
+                <div class="theme-btn theme-desert-war" data-theme="desert-war"></div>
+                
+                <div class="custom-color-picker">
+                    <div class="custom-color-label">自定义颜色：</div>
+                    <button class="custom-color" id="accent-color" title="点击选择强调色"></button>
+                </div>
+            </div>
+            
+            <!-- 颜色选择器 -->
+            <div class="color-picker" id="color-picker">
+                <div class="color-picker-row">
+                    <input type="color" id="color-selector" value="#0cebeb">
+                    <span style="color: var(--text-primary);">调整颜色后立即生效</span>
+                </div>
+            </div>
+        </div>
+        <!-- 时间轴部分 -->
+        <div class="horizontal-timeline">
+            <div class="timeline-header">
+                <h2 class="timeline-title">胡塞武装对美军航母及舰船的主要袭击行动记录</h2>
+                <p class="date-range" id="date-range">2024年5月31日 - 2025年4月6日</p>
+            </div>
+            
+            <div class="timeline-container" id="timeline-container">
+                <div class="timeline-line"></div>
+                <!-- 事件卡片由JS动态生成 -->
+            </div>
+            
+            <div class="timeline-info">
+                <div class="date-range" id="date-range">
+                    <i class="fas fa-clock"></i> 2024年5月31日 - 2025年4月6日
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-button" id="prev-btn">
+                        <i class="fas fa-arrow-left"></i> 上一条
+                    </button>
+                    <button class="nav-button" id="next-btn">
+                        下一条 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000;">
+        <div style="width:90%; max-width:600px; background:var(--card-bg); margin:100px auto; padding:20px; border-radius:10px; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
+            <h3 style="margin-bottom:20px; color:var(--accent-tertiary);">导入文本格式说明</h3>
+            <p style="margin-bottom:15px; line-height:1.6;">每行一个事件，格式为：日期|事件描述|图标|标签（多个以分号分隔）<br>示例：</p>
+            <textarea id="import-text" rows="10" style="width:100%; background:var(--input-bg); border:1px solid var(--input-border); padding:15px; border-radius:8px; color:var(--text-primary); margin-bottom:20px;">
+2024-05-31|胡塞武装声称向"艾森豪威尔"号航母发射了一枚导弹|fa-rocket|attack-tag:导弹袭击;weapon-tag:导弹:1枚
+2024-06-22|胡塞武装称使用导弹袭击了"艾森豪威尔"号航母|fa-crosshairs|attack-tag:成功袭击;weapon-tag:导弹攻击
+            </textarea>
+            <div style="display:flex; gap:10px;">
+                <button id="confirm-import" class="btn btn-primary" style="flex:1;">导入</button>
+                <button id="cancel-import" class="btn btn-secondary" style="flex:1;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        themeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                themeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.body.setAttribute('data-theme', btn.dataset.theme);
+                
+                // 重置自定义颜色按钮
+                const customColorBtn = document.getElementById('accent-color');
+                const accentColor = getComputedStyle(document.body)
+                    .getPropertyValue('--accent-primary')
+                    .trim();
+                customColorBtn.style.background = accentColor;
+            });
+        });
+
+        // 保存初始示例事件数据
+        let eventsData = [
+            {
+                date: "2024-05-31",
+                title: "胡塞武装声称向\"艾森豪威尔\"号航母发射了一枚导弹",
+                icon: "fa-rocket",
+                content: "胡塞武装声称向\"艾森豪威尔\"号航母发射了一枚导弹",
+                tags: [
+                    { type: "attack-tag", text: "导弹袭击" },
+                    { type: "weapon-tag", text: "导弹: 1枚" }
+                ]
+            },
+            {
+                date: "2024-06-22",
+                title: "胡塞武装称使用导弹袭击了\"艾森豪威尔\"号航母",
+                icon: "fa-crosshairs",
+                content: "胡塞武装称使用导弹袭击了\"艾森豪威尔\"号航母，并成功达成目标",
+                tags: [
+                    { type: "attack-tag", text: "成功袭击" },
+                    { type: "weapon-tag", text: "导弹攻击" }
+                ]
+            },
+            {
+                date: "2024-11-12",
+                title: "胡塞武装袭击阿拉伯海的\"林肯\"号航母",
+                icon: "fa-fighter-jet",
+                content: "胡塞武装称用无人机和弹道导弹袭击了阿拉伯海上的\"林肯\"号航母和红海上的两艘驱逐舰",
+                tags: [
+                    { type: "attack-tag", text: "多方攻击" },
+                    { type: "weapon-tag", text: "无人机" },
+                    { type: "weapon-tag", text: "弹道导弹" }
+                ]
+            },
+            {
+                date: "2024-12-22",
+                title: "大规模攻击\"杜鲁门\"号航母",
+                icon: "fa-fire",
+                content: "胡塞武装称对\"杜鲁门\"号航母及其护航舰只发射了8枚导弹和17架无人机，并击落一架试图拦截的美海军F/A-18战斗机",
+                tags: [
+                    { type: "attack-tag", text: "大规模攻击" },
+                    { type: "weapon-tag", text: "导弹: 8枚" },
+                    { type: "weapon-tag", text: "无人机: 17架" }
+                ]
+            },
+            {
+                date: "2025-01-11",
+                title: "9小时持续打击\"杜鲁门\"号航母",
+                icon: "fa-hourglass-half",
+                content: "胡塞武装称使用巡航导弹和无人机对位于红海北部的\"杜鲁门\"号航母发动了新一轮打击，持续9小时，迫使航母逃离",
+                tags: [
+                    { type: "attack-tag", text: "持续打击" },
+                    { type: "weapon-tag", text: "巡航导弹" },
+                    { type: "weapon-tag", text: "无人机" }
+                ]
+            },
+            {
+                date: "2025-03-17",
+                title: "对美舰船的报复行动",
+                icon: "fa-exchange-alt",
+                content: "胡塞武装称在红海对\"杜鲁门\"号航母及其护航舰只发动了两次打击，回应美军的大规模空袭",
+                tags: [
+                    { type: "attack-tag", text: "报复行动" },
+                    { type: "weapon-tag", text: "反击行动" }
+                ]
+            },
+            {
+                date: "2025-03-18",
+                title: "美方拦截胡塞武装袭击",
+                icon: "fa-shield-alt",
+                content: "胡塞武装声称向\"杜鲁门\"号航母及其护航舰只发射了多枚导弹和无人机，但美方称无人机被击落，导弹落入海中",
+                tags: [
+                    { type: "attack-tag", text: "袭击拦截" },
+                    { type: "weapon-tag", text: "导弹" },
+                    { type: "weapon-tag", text: "无人机" }
+                ]
+            },
+            {
+                date: "2025-04-06",
+                title: "胡塞武装攻击多艘美军战舰",
+                icon: "fa-shield-alt",
+                content: "胡塞武装军事发言人称，其部队在红海北部对多艘美军战舰发起袭击，使用巡航导弹和无人机，目标包括\"杜鲁门\"号航母及其补给舰",
+                tags: [
+                    { type: "attack-tag", text: "多目标攻击" },
+                    { type: "weapon-tag", text: "巡航导弹" },
+                    { type: "weapon-tag", text: "无人机" }
+                ]
+            }
+        ];
+
+        // DOM元素引用
+        const timelineContainer = document.getElementById('timeline-container');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const addEventBtn = document.getElementById('add-event');
+        const exportBtn = document.getElementById('export-data');
+        const importBtn = document.getElementById('import-data');
+        const importModal = document.getElementById('import-modal');
+        const confirmImportBtn = document.getElementById('confirm-import');
+        const cancelImportBtn = document.getElementById('cancel-import');
+        const importText = document.getElementById('import-text');
+        const accentColorBtn = document.getElementById('accent-color');
+        const colorPicker = document.getElementById('color-picker');
+        const colorSelector = document.getElementById('color-selector');
+
+        // 颜色选择功能
+        accentColorBtn.addEventListener('click', () => {
+            colorPicker.classList.toggle('active');
+        });
+        
+        // 点击其他地方关闭颜色选择器
+        document.addEventListener('click', (e) => {
+            if (!accentColorBtn.contains(e.target) && !colorPicker.contains(e.target)) {
+                colorPicker.classList.remove('active');
+            }
+        });
+        
+        // 实时颜色更新
+        colorSelector.addEventListener('input', () => {
+            const newColor = colorSelector.value;
+            
+            // 更新自定义颜色按钮
+            accentColorBtn.style.background = newColor;
+            
+            // 动态更新CSS变量
+            updateAccentColors(newColor);
+        });
+        
+        // 更新主要强调色
+        function updateAccentColors(newColor) {
+            // 创建新的渐变颜色
+            const newColor1 = shadeColor(newColor, 0.7); // 深色版本
+            const newColor2 = newColor; // 原始颜色
+            const newColor3 = shadeColor(newColor, 1.3); // 亮色版本
+            
+            // 更新CSS变量
+            document.documentElement.style.setProperty('--accent-primary', newColor1);
+            document.documentElement.style.setProperty('--accent-secondary', newColor2);
+            document.documentElement.style.setProperty('--accent-tertiary', newColor3);
+            document.documentElement.style.setProperty('--timeline-line', 
+                `linear-gradient(90deg, ${newColor1}, ${newColor2}, ${newColor3})`);
+        }
+        
+        // 辅助函数：调整颜色深浅
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+
+            R = parseInt(R * percent);
+            G = parseInt(G * percent);
+            B = parseInt(B * percent);
+
+            R = (R<255)?R:255;
+            G = (G<255)?G:255;
+            B = (B<255)?B:255;
+
+            const RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            const GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            const BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+
+            return `#${RR}${GG}${BB}`;
+        }
+
+        // 事件处理：添加新事件
+        addEventBtn.addEventListener('click', () => {
+            const eventDate = document.getElementById('event-date').value;
+            const eventContent = document.getElementById('event-content').value;
+            const eventIcon = document.getElementById('event-icon').value;
+            const eventTags = document.getElementById('event-tags').value;
+            
+            if(!eventDate || !eventContent) {
+                alert('请填写日期和事件描述');
+                return;
+            }
+            
+            const formattedDate = formatDate(eventDate);
+            const tags = [];
+            
+            // 解析标签
+            if(eventTags) {
+                const tagList = eventTags.split(',');
+                tagList.forEach(tag => {
+                    const cleanTag = tag.trim();
+                    if(cleanTag) {
+                        if(cleanTag.includes(':')) {
+                            const parts = cleanTag.split(':');
+                            tags.push({ type: parts[0], text: parts[1] });
+                        } else if(cleanTag.toLowerCase().includes('导弹') || cleanTag.toLowerCase().includes('无人机')) {
+                            tags.push({ type: "weapon-tag", text: cleanTag });
+                        } else {
+                            tags.push({ type: "attack-tag", text: cleanTag });
+                        }
+                    }
+                });
+            }
+            
+            // 创建新事件对象
+            const newEvent = {
+                date: formattedDate,
+                title: eventContent.substring(0, 30) + '...',
+                icon: eventIcon,
+                content: eventContent,
+                tags
+            };
+            
+            // 添加到数据
+            eventsData.push(newEvent);
+            
+            // 重新渲染时间轴
+            renderTimeline();
+            
+            // 清空表单
+            document.getElementById('event-date').value = '';
+            document.getElementById('event-content').value = '';
+            document.getElementById('event-tags').value = '';
+        });
+
+        // 事件处理：导出数据
+        exportBtn.addEventListener('click', () => {
+            // 构造文本
+            let exportText = '';
+            eventsData.forEach(event => {
+                const tagString = event.tags.map(tag => `${tag.type}:${tag.text}`).join(';');
+                exportText += `${event.date}|${event.content}|${event.icon}|${tagString}\n`;
+            });
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(exportText)
+                .then(() => {
+                    alert('时间轴数据已复制到剪贴板！您可以将其粘贴到任何文本编辑器中保存。');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制以下内容:\n\n' + exportText);
+                });
+        });
+
+        // 事件处理：导入数据
+        importBtn.addEventListener('click', () => {
+            importModal.style.display = 'block';
+        });
+        
+        confirmImportBtn.addEventListener('click', () => {
+            const text = importText.value.trim();
+            if(!text) {
+                alert('请输入有效的文本内容');
+                return;
+            }
+            
+            // 解析导入文本
+            const lines = text.split('\n');
+            const importedEvents = [];
+            
+            lines.forEach(line => {
+                if(line.trim()) {
+                    const [date, content, icon, tags] = line.split('|');
+                    if(date && content) {
+                        const tagObjects = [];
+                        if(tags) {
+                            const tagParts = tags.split(';');
+                            tagParts.forEach(tagPart => {
+                                if(tagPart.trim()) {
+                                    const [type, text] = tagPart.split(':');
+                                    tagObjects.push({ type, text });
+                                }
+                            });
+                        }
+                        
+                        importedEvents.push({
+                            date: date.trim(),
+                            title: content.substring(0, 30) + '...',
+                            icon: icon ? icon.trim() : 'fa-crosshairs',
+                            content: content.trim(),
+                            tags: tagObjects
+                        });
+                    }
+                }
+            });
+            
+            if(importedEvents.length > 0) {
+                eventsData = importedEvents;
+                renderTimeline();
+                alert(`成功导入 ${importedEvents.length} 个事件`);
+            } else {
+                alert('未找到有效的事件数据');
+            }
+            
+            importModal.style.display = 'none';
+        });
+        
+        cancelImportBtn.addEventListener('click', () => {
+            importModal.style.display = 'none';
+        });
+
+        // 日期格式化
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 渲染时间轴
+        function renderTimeline() {
+            // 清空容器
+            timelineContainer.innerHTML = '<div class="timeline-line"></div>';
+            
+            // 重新排序事件（按时间）
+            eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // 计算日期范围
+            updateDateRange();
+            
+            // 渲染每个事件
+            eventsData.forEach(event => {
+                const eventElement = document.createElement('div');
+                eventElement.className = 'event';
+                
+                const dateElement = document.createElement('div');
+                dateElement.className = 'event-date';
+                dateElement.innerHTML = `<i class="fas fa-calendar-alt"></i>${event.date}`;
+                
+                const iconElement = document.createElement('i');
+                iconElement.className = `fas ${event.icon} event-icon`;
+                
+                const contentElement = document.createElement('div');
+                contentElement.className = 'event-content';
+                contentElement.innerHTML = `<p>${event.content}</p>`;
+                
+                // 添加标签
+                event.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = `event-tag ${tag.type}`;
+                    tagElement.textContent = tag.text;
+                    contentElement.appendChild(tagElement);
+                });
+                
+                // 组装事件元素
+                eventElement.appendChild(dateElement);
+                eventElement.appendChild(iconElement);
+                eventElement.appendChild(contentElement);
+                
+                // 添加到容器
+                timelineContainer.appendChild(eventElement);
+            });
+            
+            // 添加导航功能
+            setupNavigation();
+            
+            // 添加卡片悬停效果
+            addCardEffects();
+        }
+
+        // 更新日期范围
+        function updateDateRange() {
+            if(eventsData.length === 0) return;
+            
+            const sortedEvents = [...eventsData].sort((a, b) => 
+                new Date(a.date) - new Date(b.date)
+            );
+            
+            const firstDate = sortedEvents[0].date;
+            const lastDate = sortedEvents[sortedEvents.length - 1].date;
+            
+            document.querySelectorAll('.date-range').forEach(el => {
+                el.innerHTML = `<i class="fas fa-clock"></i> ${firstDate} - ${lastDate}`;
+            });
+        }
+
+        // 设置卡片悬停效果
+        function addCardEffects() {
+            document.querySelectorAll('.event').forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-15px)';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0)';
+                });
+            });
+        }
+
+        // 设置导航功能
+        function setupNavigation() {
+            const events = document.querySelectorAll('.event');
+            let currentIndex = 0;
+            
+            // 初始高亮第一项
+            if(events.length > 0) {
+                events[0].classList.add('active');
+            }
+            
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    scrollToEvent(events[currentIndex]);
+                    
+                    events.forEach(e => e.classList.remove('active'));
+                    events[currentIndex].classList.add('active');
+                }
+            });
+            
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < events.length - 1) {
+                    currentIndex++;
+                    scrollToEvent(events[currentIndex]);
+                    
+                    events.forEach(e => e.classList.remove('active'));
+                    events[currentIndex].classList.add('active');
+                }
+            });
+            
+            function scrollToEvent(eventElement) {
+                const container = document.querySelector('.horizontal-timeline');
+                const eventOffset = eventElement.offsetLeft;
+                const containerWidth = container.offsetWidth;
+                const scrollPosition = eventOffset - (containerWidth / 2) + (eventElement.offsetWidth / 2);
+                
+                container.scrollTo({
+                    left: scrollPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // 初始加载
+        window.addEventListener('DOMContentLoaded', () => {
+            // 设置自定义颜色按钮的初始颜色
+            const accentColor = getComputedStyle(document.body)
+                .getPropertyValue('--accent-primary')
+                .trim();
+            document.getElementById('accent-color').style.background = accentColor;
+            document.getElementById('color-selector').value = accentColor;
+            
+            renderTimeline();
+        });
+    </script>
+</body>
+</html>

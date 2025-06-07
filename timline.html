@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>胡塞武装袭击事件时间轴 - 横向布局</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, #0cebeb, #20e3b2, #29ffc6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #adb5bd;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* 横向时间轴容器 */
+        .horizontal-timeline {
+            position: relative;
+            padding: 50px 0;
+			padding-top:0;
+            overflow-x: auto;
+        }
+
+        /* 时间轴顶部标题区域 */
+        .timeline-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border-left: 4px solid #0cebeb;
+        }
+
+        .timeline-title {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #29ffc6;
+        }
+
+        /* 时间轴主区域 */
+        .timeline-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 50px 20px;
+            position: relative;
+            min-width: fit-content;
+        }
+
+        /* 顶部时间线 */
+        .timeline-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            height: 4px;
+            background: linear-gradient(90deg, #0cebeb, #20e3b2, #29ffc6);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(32, 227, 178, 0.5);
+            z-index: 1;
+        }
+
+        /* 事件卡片 - 横向布局 */
+        .event {
+            width: 300px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin: 20px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s ease;
+            border-top: 4px solid #29ffc6;
+            z-index: 2;
+        }
+
+        .event:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(32, 227, 178, 0.4);
+        }
+
+        .event-date {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #29ffc6;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .event-date i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .event-content {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            height: 200px;
+            overflow-y: auto;
+        }
+
+        /* 连接点 */
+        .event::before {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(45deg, #0cebeb, #20e3b2);
+            border-radius: 50%;
+            box-shadow: 0 0 0 5px rgba(44, 83, 100, 0.3);
+            z-index: 3;
+        }
+
+        /* 连接线 */
+        .event::after {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 24px;
+            background: linear-gradient(180deg, #0cebeb, #29ffc6);
+        }
+
+        /* 卡片图标 */
+        .event-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #29ffc6;
+            opacity: 0.7;
+        }
+
+        /* 标签样式 */
+        .event-tag {
+            display: inline-block;
+            background: rgba(32, 227, 178, 0.2);
+            border: 1px solid rgba(32, 227, 178, 0.3);
+            color: #29ffc6;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 10px 5px 10px 0;
+        }
+
+        .attack-tag {
+            background: rgba(255, 77, 77, 0.15);
+            border-color: rgba(255, 77, 77, 0.3);
+            color: #ff4d4d;
+        }
+
+        .weapon-tag {
+            background: rgba(255, 184, 77, 0.15);
+            border-color: rgba(255, 184, 77, 0.3);
+            color: #ffb84d;
+        }
+
+        /* 导航和时间信息 */
+        .timeline-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-button {
+            padding: 10px 20px;
+            background: rgba(32, 227, 178, 0.15);
+            border: 1px solid rgba(32, 227, 178, 0.3);
+            color: #29ffc6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(32, 227, 178, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .date-range {
+            font-size: 1.2rem;
+            color: #29ffc6;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1100px) {
+            .timeline-container {
+                justify-content: flex-start;
+                padding: 50px 10px;
+            }
+            
+            .event {
+                width: 280px;
+                margin: 15px;
+            }
+            
+            .timeline-line {
+                top: -10px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .event {
+                width: 100%;
+                max-width: 400px;
+            }
+            
+            .timeline-info {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .nav-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .event-date {
+                font-size: 1.1rem;
+            }
+            
+            .event-content {
+                font-size: 0.95rem;
+                height: 180px;
+            }
+            
+            .date-range {
+                font-size: 1rem;
+            }
+            
+            .nav-button {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #0cebeb, #20e3b2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #29ffc6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- <header>
+            <h1>胡塞武装袭击事件时间轴</h1>
+        </header> -->
+        <div class="horizontal-timeline">
+            <div class="timeline-header">
+                <h2 class="timeline-title">胡塞武装对美军航母及舰船的主要袭击行动记录</h2>
+                <p class="date-range">2024年5月31日 - 2025年4月06日</p>
+            </div>
+            
+            <div class="timeline-container">
+                <div class="timeline-line"></div>
+                
+                <!-- 事件 1 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2024年5月31日
+                    </div>
+                    <i class="fas fa-rocket event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装声称向"艾森豪威尔"号航母发射了一枚导弹。</p>
+                        <span class="event-tag attack-tag">导弹袭击</span>
+                        <span class="event-tag weapon-tag">导弹: 1枚</span>
+                    </div>
+                </div>
+
+                <!-- 事件 2 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2024年6月22日
+                    </div>
+                    <i class="fas fa-crosshairs event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装称使用导弹袭击了"艾森豪威尔"号航母，并成功达成目标。</p>
+                        <span class="event-tag attack-tag">成功袭击</span>
+                        <span class="event-tag weapon-tag">导弹攻击</span>
+                    </div>
+                </div>
+
+                <!-- 事件 3 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2024年11月12日
+                    </div>
+                    <i class="fas fa-fighter-jet event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装称用无人机和弹道导弹袭击了阿拉伯海上的"林肯"号航母和红海上的两艘驱逐舰。</p>
+                        <span class="event-tag attack-tag">多方攻击</span>
+                        <span class="event-tag weapon-tag">无人机</span>
+                        <span class="event-tag weapon-tag">弹道导弹</span>
+                    </div>
+                </div>
+
+                <!-- 事件 4 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2024年12月22日
+                    </div>
+                    <i class="fas fa-fire event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装称对"杜鲁门"号航母及其护航舰只发射了8枚导弹和17架无人机，并击落一架试图拦截的美海军F/A-18战斗机。</p>
+                        <span class="event-tag attack-tag">大规模攻击</span>
+                        <span class="event-tag weapon-tag">导弹: 8枚</span>
+                        <span class="event-tag weapon-tag">无人机: 17架</span>
+                    </div>
+                </div>
+
+                <!-- 事件 5 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2025年1月11日
+                    </div>
+                    <i class="fas fa-hourglass-half event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装称在过去24小时内使用巡航导弹和无人机对位于红海北部的"杜鲁门"号航母发动了新一轮打击，持续9小时，迫使航母逃离。</p>
+                        <span class="event-tag attack-tag">持续打击</span>
+                        <span class="event-tag weapon-tag">巡航导弹</span>
+                        <span class="event-tag weapon-tag">无人机</span>
+                    </div>
+                </div>
+
+                <!-- 事件 6 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2025年3月17日
+                    </div>
+                    <i class="fas fa-exchange-alt event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装称在红海对"杜鲁门"号航母及其护航舰只发动了两次打击，回应美军的大规模空袭。</p>
+                        <span class="event-tag attack-tag">报复行动</span>
+                        <span class="event-tag weapon-tag">反击行动</span>
+                    </div>
+                </div>
+
+                <!-- 事件 7 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2025年3月18日
+                    </div>
+                    <i class="fas fa-shield-alt event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装声称向"杜鲁门"号航母及其护航舰只发射了多枚导弹和无人机，但美方称无人机被击落，导弹落入海中。</p>
+                        <span class="event-tag attack-tag">袭击拦截</span>
+                        <span class="event-tag weapon-tag">导弹</span>
+                        <span class="event-tag weapon-tag">无人机</span>
+                    </div>
+                </div>
+                <!-- 事件 8 -->
+                <div class="event">
+                    <div class="event-date">
+                        <i class="fas fa-calendar-alt"></i>2025年4月6日
+                    </div>
+                    <i class="fas fa-shield-alt event-icon"></i>
+                    <div class="event-content">
+                        <p>胡塞武装军事发言人称，其部队在红海北部对多艘美军战舰发起袭击，使用巡航导弹和无人机，目标包括“杜鲁门”号航母及其补给舰。</p>
+                        <span class="event-tag attack-tag">袭击拦截</span>
+                        <span class="event-tag weapon-tag">导弹</span>
+                        <span class="event-tag weapon-tag">无人机</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-info">
+                <div class="date-range">
+                    <i class="fas fa-clock"></i> 2024年5月31日 - 2025年3月18日
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-button" id="prev-btn">
+                        <i class="fas fa-arrow-left"></i> 上一条
+                    </button>
+                    <button class="nav-button" id="next-btn">
+                        下一条 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 卡片悬停效果
+        document.querySelectorAll('.event').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-15px)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+
+        // 导航功能
+        const events = document.querySelectorAll('.event');
+        let currentIndex = 0;
+        
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                scrollToEvent();
+            }
+        });
+        
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentIndex < events.length - 1) {
+                currentIndex++;
+                scrollToEvent();
+            }
+        });
+        
+        function scrollToEvent() {
+            const event = events[currentIndex];
+            const container = document.querySelector('.horizontal-timeline');
+            const eventOffset = event.offsetLeft;
+            const containerWidth = container.offsetWidth;
+            const scrollPosition = eventOffset - (containerWidth / 2) + (event.offsetWidth / 2);
+            
+            container.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth'
+            });
+            
+            // 添加高亮效果
+            events.forEach(e => e.classList.remove('active'));
+            event.classList.add('active');
+        }
+        
+        // 初始高亮第一项
+        events[0].classList.add('active');
+        
+        // 触摸屏上的水平滚动
+        const timeline = document.querySelector('.timeline-container');
+        let startX;
+        let scrollLeft;
+        
+        timeline.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].pageX;
+            scrollLeft = timeline.scrollLeft;
+        });
+        
+        timeline.addEventListener('touchmove', (e) => {
+            const x = e.touches[0].pageX;
+            const walk = (x - startX) * 3; // 滚动速度
+            timeline.scrollLeft = scrollLeft - walk;
+        });
+    </script>
+</body>
+</html>
